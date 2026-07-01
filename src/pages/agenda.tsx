@@ -162,8 +162,8 @@ export default function AgendaPage({
   const [listTab, setListTab] = React.useState<'active' | 'completed'>('active')
   const [selectedCampaign, setSelectedCampaign] = React.useState<Campaign | null>(null)
   
-  // Estado da data atual de navegação (Inicializado no mês de testes: Agosto de 2026)
-  const [currentDate, setCurrentDate] = React.useState<Date>(new Date(2026, 7, 1))
+  // Estado da data atual de navegação (Inicializado dinamicamente no dia de hoje)
+  const [currentDate, setCurrentDate] = React.useState<Date>(new Date())
 
   const [commentName, setCommentName] = React.useState('')
   const [commentText, setCommentText] = React.useState('')
@@ -221,8 +221,8 @@ export default function AgendaPage({
   }
 
   const handleToday = () => {
-    // Retorna para o mês padrão dos dados de exemplo
-    setCurrentDate(new Date(2026, 7, 1))
+    // Retorna para o dia atual (Hoje)
+    setCurrentDate(new Date())
   }
 
   // Envio de comentários
