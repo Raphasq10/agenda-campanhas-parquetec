@@ -40,6 +40,21 @@ interface AgendaProps {
   error?: string | null
 }
 
+// Função para mapear cores pastéis personalizadas para cada canal de mídia
+export const getChannelColor = (channel: string): string => {
+  const colors: Record<string, string> = {
+    Meta: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/45 dark:text-blue-300 dark:border-blue-900/50',
+    Google: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/45 dark:text-red-300 dark:border-red-900/50',
+    LinkedIn: 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/45 dark:text-sky-300 dark:border-sky-900/50',
+    WhatsApp: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-900/50',
+    YouTube: 'bg-rose-50 text-rose-805 border-rose-200 dark:bg-rose-950/45 dark:text-rose-300 dark:border-rose-900/50',
+    TV: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/45 dark:text-purple-300 dark:border-purple-900/50',
+    Radio: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-900/50',
+    Email: 'bg-indigo-50 text-indigo-850 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-300 dark:border-indigo-900/50'
+  }
+  return colors[channel] || 'bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800/50'
+}
+
 // 1. Função para gerar cores pastéis consistentes e harmoniosas por ID de campanha
 interface PastelScheme {
   bg: string
@@ -759,7 +774,7 @@ export default function AgendaPage({
                             <CardTitle className="text-lg font-bold mt-2 group-hover:text-primary transition-colors">{c.name}</CardTitle>
                             <div className="flex flex-wrap gap-1 mt-2">
                               {c.channels.map(ch => (
-                                <Badge key={ch} className={colors.bg + ' ' + colors.text + ' ' + colors.border} variant="secondary">{ch}</Badge>
+                                <Badge key={ch} className={getChannelColor(ch)} variant="secondary">{ch}</Badge>
                               ))}
                             </div>
                           </CardHeader>
@@ -815,7 +830,7 @@ export default function AgendaPage({
                   {selectedCampaign.status}
                 </Badge>
                 {selectedCampaign.channels.map(ch => (
-                  <Badge key={ch} className="bg-muted text-muted-foreground" variant="secondary">
+                  <Badge key={ch} className={getChannelColor(ch)} variant="secondary">
                     {ch}
                   </Badge>
                 ))}
