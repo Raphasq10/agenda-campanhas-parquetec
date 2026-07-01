@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import AgendaPage from './agenda'
 import type { Campaign } from './agenda'
-import { Calendar as CalendarIcon, Tag, DollarSign, FileText } from 'lucide-react'
+import { Calendar as CalendarIcon, Tag, DollarSign, FileText, AlertTriangle } from 'lucide-react'
 
 // Schema de validação Zod para garantir consistência de datas e segurança
 const campaignFormSchema = z.object({
