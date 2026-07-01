@@ -40,22 +40,39 @@ interface AgendaProps {
   error?: string | null
 }
 
-// Função para mapear cores pastéis personalizadas para cada canal de mídia
+// Função para mapear cores pastéis personalizadas para cada canal de mídia (com tolerância a maiúsculas/minúsculas e erros comuns)
 export const getChannelColor = (channel: string): string => {
-  const colors: Record<string, string> = {
-    Meta: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/45 dark:text-blue-300 dark:border-blue-900/50',
-    Google: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/45 dark:text-red-300 dark:border-red-900/50',
-    LinkedIn: 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/45 dark:text-sky-300 dark:border-sky-900/50',
-    WhatsApp: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-900/50',
-    YouTube: 'bg-rose-50 text-rose-805 border-rose-200 dark:bg-rose-950/45 dark:text-rose-300 dark:border-rose-900/50',
-    TV: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/45 dark:text-purple-300 dark:border-purple-900/50',
-    Radio: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-900/50',
-    Email: 'bg-indigo-50 text-indigo-850 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-300 dark:border-indigo-900/50'
+  const norm = channel.toLowerCase().trim()
+  
+  if (norm === 'meta' || norm === 'facebook' || norm === 'instagram' || norm === 'insta' || norm === 'face') {
+    return 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/45 dark:text-blue-300 dark:border-blue-900/50'
   }
-  return colors[channel] || 'bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800/50'
+  if (norm === 'google' || norm === 'adwords' || norm === 'ads') {
+    return 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/45 dark:text-red-300 dark:border-red-900/50'
+  }
+  if (norm === 'linkedin' || norm === 'linkdin') {
+    return 'bg-sky-50 text-sky-850 border-sky-200 dark:bg-sky-950/45 dark:text-sky-300 dark:border-sky-900/50'
+  }
+  if (norm === 'whatsapp' || norm === 'whats' || norm === 'zap' || norm === 'wpp') {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-900/50'
+  }
+  if (norm === 'youtube' || norm === 'yotube' || norm === 'youtub' || norm === 'yt') {
+    return 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/45 dark:text-rose-300 dark:border-rose-900/50'
+  }
+  if (norm === 'tv' || norm === 'televisao' || norm === 'televisão' || norm === 'televisã' || norm === 'mídia tv') {
+    return 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/45 dark:text-purple-300 dark:border-purple-900/50'
+  }
+  if (norm === 'radio' || norm === 'rádio') {
+    return 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-900/50'
+  }
+  if (norm === 'email' || norm === 'e-mail' || norm === 'newsletter' || norm === 'mail') {
+    return 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-300 dark:border-indigo-900/50'
+  }
+  
+  return 'bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800/50'
 }
 
-// 1. Função para gerar cores pastéis consistentes e harmoniosas por ID de campanha
+// 1. Função para gerar cores pastéis consistentes e harmoniosas por ID de campanha (20 opções exclusivas)
 interface PastelScheme {
   bg: string
   text: string
@@ -66,62 +83,26 @@ interface PastelScheme {
 
 export const getPastelColor = (campaignId: string): PastelScheme => {
   const schemes: PastelScheme[] = [
-    { 
-      bg: 'bg-emerald-50 dark:bg-emerald-950/30', 
-      text: 'text-emerald-800 dark:text-emerald-300', 
-      border: 'border-emerald-200 dark:border-emerald-800/60', 
-      hoverBg: 'hover:bg-emerald-100 dark:hover:bg-emerald-950/50',
-      dot: 'bg-emerald-500' 
-    },
-    { 
-      bg: 'bg-sky-50 dark:bg-sky-950/30', 
-      text: 'text-sky-800 dark:text-sky-300', 
-      border: 'border-sky-200 dark:border-sky-800/60', 
-      hoverBg: 'hover:bg-sky-100 dark:hover:bg-sky-950/50',
-      dot: 'bg-sky-500' 
-    },
-    { 
-      bg: 'bg-purple-50 dark:bg-purple-950/30', 
-      text: 'text-purple-800 dark:text-purple-300', 
-      border: 'border-purple-200 dark:border-purple-800/60', 
-      hoverBg: 'hover:bg-purple-100 dark:hover:bg-purple-950/50',
-      dot: 'bg-purple-500' 
-    },
-    { 
-      bg: 'bg-amber-50 dark:bg-amber-950/30', 
-      text: 'text-amber-800 dark:text-amber-300', 
-      border: 'border-amber-200 dark:border-amber-800/60', 
-      hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-950/50',
-      dot: 'bg-amber-500' 
-    },
-    { 
-      bg: 'bg-rose-50 dark:bg-rose-950/30', 
-      text: 'text-rose-800 dark:text-rose-300', 
-      border: 'border-rose-200 dark:border-rose-800/60', 
-      hoverBg: 'hover:bg-rose-100 dark:hover:bg-rose-950/50',
-      dot: 'bg-rose-500' 
-    },
-    { 
-      bg: 'bg-indigo-50 dark:bg-indigo-950/30', 
-      text: 'text-indigo-800 dark:text-indigo-300', 
-      border: 'border-indigo-200 dark:border-indigo-800/60', 
-      hoverBg: 'hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
-      dot: 'bg-indigo-500' 
-    },
-    { 
-      bg: 'bg-teal-50 dark:bg-teal-950/30', 
-      text: 'text-teal-800 dark:text-teal-300', 
-      border: 'border-teal-200 dark:border-teal-800/60', 
-      hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-950/50',
-      dot: 'bg-teal-500' 
-    },
-    { 
-      bg: 'bg-orange-50 dark:bg-orange-950/30', 
-      text: 'text-orange-800 dark:text-orange-300', 
-      border: 'border-orange-200 dark:border-orange-800/60', 
-      hoverBg: 'hover:bg-orange-100 dark:hover:bg-orange-950/50',
-      dot: 'bg-orange-500' 
-    }
+    { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-800 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800/60', hoverBg: 'hover:bg-emerald-100/80', dot: 'bg-emerald-500' },
+    { bg: 'bg-sky-50 dark:bg-sky-950/30', text: 'text-sky-800 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800/60', hoverBg: 'hover:bg-sky-100/80', dot: 'bg-sky-500' },
+    { bg: 'bg-purple-50 dark:bg-purple-950/30', text: 'text-purple-800 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800/60', hoverBg: 'hover:bg-purple-100/80', dot: 'bg-purple-500' },
+    { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800/60', hoverBg: 'hover:bg-amber-100/80', dot: 'bg-amber-500' },
+    { bg: 'bg-rose-50 dark:bg-rose-950/30', text: 'text-rose-800 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800/60', hoverBg: 'hover:bg-rose-100/80', dot: 'bg-rose-500' },
+    { bg: 'bg-indigo-50 dark:bg-indigo-950/30', text: 'text-indigo-800 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800/60', hoverBg: 'hover:bg-indigo-100/80', dot: 'bg-indigo-500' },
+    { bg: 'bg-teal-50 dark:bg-teal-950/30', text: 'text-teal-800 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800/60', hoverBg: 'hover:bg-teal-100/80', dot: 'bg-teal-500' },
+    { bg: 'bg-orange-50 dark:bg-orange-950/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800/60', hoverBg: 'hover:bg-orange-100/80', dot: 'bg-orange-500' },
+    { bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-800 dark:text-red-300', border: 'border-red-200 dark:border-red-800/60', hoverBg: 'hover:bg-red-100/80', dot: 'bg-red-500' },
+    { bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-800 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800/60', hoverBg: 'hover:bg-blue-100/80', dot: 'bg-blue-500' },
+    { bg: 'bg-violet-50 dark:bg-violet-950/30', text: 'text-violet-800 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-800/60', hoverBg: 'hover:bg-violet-100/80', dot: 'bg-violet-500' },
+    { bg: 'bg-fuchsia-50 dark:bg-fuchsia-950/30', text: 'text-fuchsia-800 dark:text-fuchsia-300', border: 'border-fuchsia-200 dark:border-fuchsia-800/60', hoverBg: 'hover:bg-fuchsia-100/80', dot: 'bg-fuchsia-500' },
+    { bg: 'bg-pink-50 dark:bg-pink-950/30', text: 'text-pink-800 dark:text-pink-300', border: 'border-pink-200 dark:border-pink-800/60', hoverBg: 'hover:bg-pink-100/80', dot: 'bg-pink-500' },
+    { bg: 'bg-lime-50 dark:bg-lime-950/30', text: 'text-lime-800 dark:text-lime-300', border: 'border-lime-200 dark:border-lime-800/60', hoverBg: 'hover:bg-lime-100/80', dot: 'bg-lime-500' },
+    { bg: 'bg-green-50 dark:bg-green-950/30', text: 'text-green-800 dark:text-green-300', border: 'border-green-200 dark:border-green-800/60', hoverBg: 'hover:bg-green-100/80', dot: 'bg-green-500' },
+    { bg: 'bg-cyan-50 dark:bg-cyan-950/30', text: 'text-cyan-800 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800/60', hoverBg: 'hover:bg-cyan-100/80', dot: 'bg-cyan-500' },
+    { bg: 'bg-yellow-50 dark:bg-yellow-950/30', text: 'text-yellow-805 dark:text-yellow-300', border: 'border-yellow-200 dark:border-yellow-800/60', hoverBg: 'hover:bg-yellow-100/80', dot: 'bg-yellow-500' },
+    { bg: 'bg-slate-50 dark:bg-slate-950/30', text: 'text-slate-800 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-800/60', hoverBg: 'hover:bg-slate-100/80', dot: 'bg-slate-500' },
+    { bg: 'bg-zinc-50 dark:bg-zinc-950/30', text: 'text-zinc-800 dark:text-zinc-300', border: 'border-zinc-200 dark:border-zinc-800/60', hoverBg: 'hover:bg-zinc-100/80', dot: 'bg-zinc-500' },
+    { bg: 'bg-stone-50 dark:bg-stone-950/30', text: 'text-stone-800 dark:text-stone-300', border: 'border-stone-200 dark:border-stone-800/60', hoverBg: 'hover:bg-stone-100/80', dot: 'bg-stone-500' }
   ]
 
   let hash = 0
