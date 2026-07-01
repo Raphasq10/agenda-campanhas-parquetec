@@ -295,7 +295,7 @@ export default function AgendaPage({
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-[1450px] w-full mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
               <CalendarIcon className="size-5" />
@@ -352,7 +352,7 @@ export default function AgendaPage({
 
       {/* Barra de Filtros */}
       <section className="bg-muted/20 border-b border-border py-4">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="max-w-[1450px] w-full mx-auto px-4 flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
@@ -390,7 +390,7 @@ export default function AgendaPage({
       </section>
 
       {/* Conteúdo Principal */}
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow max-w-[1450px] w-full mx-auto px-4 py-8">
         {loading && (
           <div className="space-y-4 animate-pulse">
             <div className="h-8 bg-muted/60 w-1/4 rounded"></div>
@@ -722,7 +722,7 @@ export default function AgendaPage({
                           {/* Faixa lateral decorativa pastel para integrar a cor identificadora no card */}
                           <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${colors.dot}`} />
 
-                          <CardHeader className="pb-3 pl-5">
+                          <CardHeader className="pt-6 px-6 md:px-8 pb-4 pl-7 md:pl-9">
                             <div className="flex justify-between items-start gap-2">
                               <Badge className={getStatusColor(c.status)} variant="outline">{c.status}</Badge>
                               {isAdmin && (
@@ -759,7 +759,7 @@ export default function AgendaPage({
                               ))}
                             </div>
                           </CardHeader>
-                          <CardContent className="text-sm space-y-3 pb-3 pl-5">
+                          <CardContent className="text-sm space-y-4 pb-5 pl-7 md:pl-9 pr-6 md:pr-8">
                             <div className="flex items-center text-muted-foreground text-xs gap-1.5">
                               <Clock className="size-3.5" />
                               <span>
@@ -777,7 +777,7 @@ export default function AgendaPage({
                               </p>
                             )}
                           </CardContent>
-                          <CardFooter className="pt-2 border-t border-border/40 flex items-center justify-between pl-5">
+                          <CardFooter className="pt-4 border-t border-border/40 flex items-center justify-between pl-7 md:pl-9 pr-6 md:pr-8 pb-4 bg-muted/5">
                             <Button variant="ghost" size="sm" className="w-full text-xs font-semibold gap-1.5 hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => setSelectedCampaign(c)}>
                               <MessageSquare className="size-3.5" />
                               Ver Detalhes e Comentários ({c.comments.length})
@@ -796,7 +796,7 @@ export default function AgendaPage({
 
       {/* Footer */}
       <footer className="border-t border-border bg-muted/10 py-6 mt-12 text-center text-xs text-muted-foreground">
-        <div className="container mx-auto px-4">
+        <div className="max-w-[1450px] w-full mx-auto px-4">
           <p>© {new Date().getFullYear()} Agenda de Campanhas. Desenvolvido para alinhamento entre Marketing & Agência.</p>
         </div>
       </footer>
