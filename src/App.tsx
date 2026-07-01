@@ -2,6 +2,7 @@ import React from 'react'
 import AgendaPage from './pages/agenda'
 import LoginPage from './pages/login'
 import AdminPanelPage from './pages/admin-panel'
+import PublicGatePage from './pages/public-gate'
 import type { Campaign } from './pages/agenda'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
@@ -43,6 +44,11 @@ export default function App() {
   const [session, setSession] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(true)
   const [dbError, setDbError] = React.useState<string | null>(null)
+  
+  // Controle de barreira de acesso público (salva permissão no navegador)
+  const [isPublicAuthenticated, setIsPublicAuthenticated] = React.useState<boolean>(() => {
+    return localStorage.getItem('public_access_granted') === 'true'
+  })
 
   // 2. Função para buscar campanhas e comentários agregados do Supabase
   const fetchCampaigns = async (showLoadingIndicator = false) => {
@@ -185,6 +191,21 @@ export default function App() {
     } catch (err: any) {
       toast.error('Erro ao fazer logout.')
     }
+  }
+
+  // Determina se deve exibir o bloqueio de acesso geral (público)
+  const showPublicLock = !isPublicAuthenticated && !session && currentPage !== 'login'
+
+  if (showPublicLock) {
+    return (
+      <React.Fragment>
+        <PublicGatePage
+          onAccessGranted={() => setIsPublicAuthenticated(true)}
+          onNavigateToLogin={() => setCurrentPage('login')}
+        />
+        <Toaster position="bottom-right" richColors />
+      </React.Fragment>
+    )
   }
 
   return (
