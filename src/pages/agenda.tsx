@@ -1,13 +1,12 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calendar as CalendarIcon, List, Clock, Search, LogIn, LogOut, Plus, Edit, Trash2, MessageSquare, AlertTriangle } from 'lucide-react'
+import { Calendar as CalendarIcon, List, Clock, Search, LogIn, LogOut, Plus, Edit, Trash2, MessageSquare, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 
-// Definição da estrutura de dados para Campanhas e Comentários
 export interface Comment {
   id: string
   author: string
@@ -41,6 +40,114 @@ interface AgendaProps {
   error?: string | null
 }
 
+// 1. Função para gerar cores pastéis consistentes e harmoniosas por ID de campanha
+interface PastelScheme {
+  bg: string
+  text: string
+  border: string
+  hoverBg: string
+  dot: string
+}
+
+export const getPastelColor = (campaignId: string): PastelScheme => {
+  const schemes: PastelScheme[] = [
+    { 
+      bg: 'bg-emerald-50 dark:bg-emerald-950/30', 
+      text: 'text-emerald-800 dark:text-emerald-300', 
+      border: 'border-emerald-200 dark:border-emerald-800/60', 
+      hoverBg: 'hover:bg-emerald-100 dark:hover:bg-emerald-950/50',
+      dot: 'bg-emerald-500' 
+    },
+    { 
+      bg: 'bg-sky-50 dark:bg-sky-950/30', 
+      text: 'text-sky-800 dark:text-sky-300', 
+      border: 'border-sky-200 dark:border-sky-800/60', 
+      hoverBg: 'hover:bg-sky-100 dark:hover:bg-sky-950/50',
+      dot: 'bg-sky-500' 
+    },
+    { 
+      bg: 'bg-purple-50 dark:bg-purple-950/30', 
+      text: 'text-purple-800 dark:text-purple-300', 
+      border: 'border-purple-200 dark:border-purple-800/60', 
+      hoverBg: 'hover:bg-purple-100 dark:hover:bg-purple-950/50',
+      dot: 'bg-purple-500' 
+    },
+    { 
+      bg: 'bg-amber-50 dark:bg-amber-950/30', 
+      text: 'text-amber-800 dark:text-amber-300', 
+      border: 'border-amber-200 dark:border-amber-800/60', 
+      hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-950/50',
+      dot: 'bg-amber-500' 
+    },
+    { 
+      bg: 'bg-rose-50 dark:bg-rose-950/30', 
+      text: 'text-rose-800 dark:text-rose-300', 
+      border: 'border-rose-200 dark:border-rose-800/60', 
+      hoverBg: 'hover:bg-rose-100 dark:hover:bg-rose-950/50',
+      dot: 'bg-rose-500' 
+    },
+    { 
+      bg: 'bg-indigo-50 dark:bg-indigo-950/30', 
+      text: 'text-indigo-800 dark:text-indigo-300', 
+      border: 'border-indigo-200 dark:border-indigo-800/60', 
+      hoverBg: 'hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
+      dot: 'bg-indigo-500' 
+    },
+    { 
+      bg: 'bg-teal-50 dark:bg-teal-950/30', 
+      text: 'text-teal-800 dark:text-teal-300', 
+      border: 'border-teal-200 dark:border-teal-800/60', 
+      hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-950/50',
+      dot: 'bg-teal-500' 
+    },
+    { 
+      bg: 'bg-orange-50 dark:bg-orange-950/30', 
+      text: 'text-orange-800 dark:text-orange-300', 
+      border: 'border-orange-200 dark:border-orange-800/60', 
+      hoverBg: 'hover:bg-orange-100 dark:hover:bg-orange-950/50',
+      dot: 'bg-orange-500' 
+    }
+  ]
+
+  let hash = 0
+  for (let i = 0; i < campaignId.length; i++) {
+    hash = campaignId.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const idx = Math.abs(hash) % schemes.length
+  return schemes[idx]
+}
+
+// 2. Auxiliares para cálculo de data e geração do calendário semanal/mensal
+const toDateString = (d: Date) => d.toISOString().split('T')[0]
+
+const getWeeksOfMonth = (year: number, month: number): Date[][] => {
+  const weeks: Date[][] = []
+  const firstDayOfMonth = new Date(year, month, 1)
+  const lastDayOfMonth = new Date(year, month + 1, 0)
+  
+  // Encontra o domingo da primeira semana do mês
+  const startDay = new Date(firstDayOfMonth)
+  startDay.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay())
+  
+  const currentDay = new Date(startDay)
+  
+  while (currentDay <= lastDayOfMonth || currentDay.getDay() !== 0) {
+    if (currentDay.getDay() === 0) {
+      weeks.push([])
+    }
+    weeks[weeks.length - 1].push(new Date(currentDay))
+    currentDay.setDate(currentDay.getDate() + 1)
+  }
+  return weeks
+}
+
+const getStartOfWeek = (d: Date): Date => {
+  const date = new Date(d)
+  const day = date.getDay()
+  const diff = date.getDate() - day
+  return new Date(date.setDate(diff))
+}
+
 export default function AgendaPage({
   campaigns,
   isAdmin,
@@ -53,43 +160,38 @@ export default function AgendaPage({
   loading = false,
   error = null
 }: AgendaProps) {
-  // Controle de visualização de tela ('monthly' | 'weekly' | 'list')
   const [view, setView] = React.useState<'monthly' | 'weekly' | 'list'>('list')
-  // Filtros de busca e plataforma
   const [searchQuery, setSearchQuery] = React.useState('')
   const [selectedChannel, setSelectedChannel] = React.useState<string | null>(null)
-  // Aba ativa na visualização em lista ('active' | 'completed')
   const [listTab, setListTab] = React.useState<'active' | 'completed'>('active')
-  // Estado do Modal de Detalhes da Campanha
   const [selectedCampaign, setSelectedCampaign] = React.useState<Campaign | null>(null)
   
-  // Estados para o formulário de novo comentário
+  // Estado da data atual de navegação (Inicializado no mês de testes: Agosto de 2026)
+  const [currentDate, setCurrentDate] = React.useState<Date>(new Date(2026, 7, 1))
+
   const [commentName, setCommentName] = React.useState('')
   const [commentText, setCommentText] = React.useState('')
   const [commentError, setCommentError] = React.useState<string | null>(null)
 
-  // Extrai canais únicos para carregar o filtro
+  // Extrai canais para filtro
   const allChannels = React.useMemo(() => {
     const channels = new Set<string>()
     campaigns.forEach(c => c.channels.forEach(ch => channels.add(ch)))
     return Array.from(channels)
   }, [campaigns])
 
-  // Filtra as campanhas com base no input de busca e tag selecionada
+  // Filtra campanhas com base na busca e canal selecionado
   const filteredCampaigns = React.useMemo(() => {
     return campaigns.filter(campaign => {
       const matchesSearch = campaign.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         (campaign.notes && campaign.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-      
       const matchesChannel = selectedChannel ? campaign.channels.includes(selectedChannel) : true
-      
       return matchesSearch && matchesChannel
     })
   }, [campaigns, searchQuery, selectedChannel])
 
-  // Separa as campanhas ativas e concluídas
+  // Regra de Negócio: Filtra campanhas Ativas (não concluídas) para exibições de calendário
   const activeCampaigns = React.useMemo(() => {
-    // Regra de Negócio: Campanhas "Concluídas" saem do calendário e ficam agrupadas na lista
     return filteredCampaigns.filter(c => c.status !== 'Concluída')
   }, [filteredCampaigns])
 
@@ -97,7 +199,37 @@ export default function AgendaPage({
     return filteredCampaigns.filter(c => c.status === 'Concluída')
   }, [filteredCampaigns])
 
-  // Submissão do formulário de novos comentários
+  // Lógica de navegação de datas
+  const handlePrevPeriod = () => {
+    if (view === 'monthly') {
+      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+    } else if (view === 'weekly') {
+      setCurrentDate(prev => {
+        const next = new Date(prev)
+        next.setDate(prev.getDate() - 7)
+        return next
+      })
+    }
+  }
+
+  const handleNextPeriod = () => {
+    if (view === 'monthly') {
+      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+    } else if (view === 'weekly') {
+      setCurrentDate(prev => {
+        const next = new Date(prev)
+        next.setDate(prev.getDate() + 7)
+        return next
+      })
+    }
+  }
+
+  const handleToday = () => {
+    // Retorna para o mês padrão dos dados de exemplo
+    setCurrentDate(new Date(2026, 7, 1))
+  }
+
+  // Envio de comentários
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setCommentError(null)
@@ -118,17 +250,12 @@ export default function AgendaPage({
         setCommentError('Por favor, informe seu nome para comentar.')
         return
       }
-      if (commentName.length > 100) {
-        setCommentError('Seu nome deve ter no máximo 100 caracteres.')
-        return
-      }
       authorName = commentName.trim()
     }
 
     if (selectedCampaign) {
       onAddComment(selectedCampaign.id, authorName, commentText.trim())
       
-      // Atualiza o modal de detalhes para exibir o novo comentário adicionado
       const updatedCampaign = campaigns.find(c => c.id === selectedCampaign.id)
       if (updatedCampaign) {
         setSelectedCampaign({
@@ -151,20 +278,6 @@ export default function AgendaPage({
     }
   }
 
-  // Cores de tag por canal
-  const getChannelColor = (channel: string) => {
-    const colors: Record<string, string> = {
-      Meta: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      Google: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      LinkedIn: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
-      WhatsApp: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-      YouTube: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-200',
-      TV: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-      Radio: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-    }
-    return colors[channel] || 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
-  }
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'A começar': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
@@ -172,12 +285,19 @@ export default function AgendaPage({
       Pausada: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
       Concluída: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
     }
-    return colors[status] || 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+    return colors[status] || 'bg-slate-100 text-slate-800'
   }
+
+  // --- Algoritmo de geração das semanas do calendário ---
+  const weeks = React.useMemo(() => {
+    return getWeeksOfMonth(currentDate.getFullYear(), currentDate.getMonth())
+  }, [currentDate])
+
+  const weekDaysHeader = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      {/* 1. Header do Layout Base */}
+      {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -188,41 +308,22 @@ export default function AgendaPage({
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Navegação/Visualizações */}
             <div className="hidden sm:flex bg-muted p-1 rounded-lg text-sm font-medium gap-1" role="tablist">
-              <Button
-                variant={view === 'monthly' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-8"
-                onClick={() => setView('monthly')}
-                role="tab"
-                aria-selected={view === 'monthly'}
-              >
-                Mensal
-              </Button>
-              <Button
-                variant={view === 'weekly' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-8"
-                onClick={() => setView('weekly')}
-                role="tab"
-                aria-selected={view === 'weekly'}
-              >
-                Semanal
-              </Button>
-              <Button
-                variant={view === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-8"
-                onClick={() => setView('list')}
-                role="tab"
-                aria-selected={view === 'list'}
-              >
-                Lista
-              </Button>
+              {['monthly', 'weekly', 'list'].map((tab) => (
+                <Button
+                  key={tab}
+                  variant={view === tab ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 capitalize"
+                  onClick={() => setView(tab as any)}
+                  role="tab"
+                  aria-selected={view === tab}
+                >
+                  {tab === 'monthly' ? 'Mensal' : tab === 'weekly' ? 'Semanal' : 'Lista'}
+                </Button>
+              ))}
             </div>
 
-            {/* Login / Logout Auth Controls */}
             {isAdmin ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground hidden md:inline-block">
@@ -253,18 +354,17 @@ export default function AgendaPage({
         </div>
       </header>
 
-      {/* 2. Área de Filtros e Busca */}
+      {/* Barra de Filtros */}
       <section className="bg-muted/20 border-b border-border py-4">
         <div className="container mx-auto px-4 flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar campanha por nome ou notas..."
+              placeholder="Buscar campanha..."
               maxLength={100}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 bg-card border-border focus-visible:ring-primary/50"
-              aria-label="Buscar campanhas"
+              className="pl-9 bg-card border-border"
             />
           </div>
 
@@ -293,80 +393,158 @@ export default function AgendaPage({
         </div>
       </section>
 
-      {/* 3. Área de Conteúdo Principal */}
+      {/* Conteúdo Principal */}
       <main className="flex-grow container mx-auto px-4 py-8">
-        
-        {/* Loading State (Esqueleto) */}
         {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse border-border bg-card">
-                <CardHeader className="h-24 bg-muted/50 rounded-t-lg"></CardHeader>
-                <CardContent className="h-32 space-y-4 py-6">
-                  <div className="h-4 bg-muted/50 w-1/3 rounded"></div>
-                  <div className="h-4 bg-muted/50 w-2/3 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-4 animate-pulse">
+            <div className="h-8 bg-muted/60 w-1/4 rounded"></div>
+            <div className="h-96 bg-muted/30 rounded-xl"></div>
           </div>
         )}
 
-        {/* Error State */}
         {error && !loading && (
           <Card className="max-w-xl mx-auto border-destructive/20 bg-destructive/10">
             <CardHeader className="flex flex-row items-center gap-3">
               <AlertTriangle className="size-6 text-destructive" />
-              <CardTitle className="text-destructive font-bold">Erro de Conexão</CardTitle>
+              <CardTitle className="text-destructive font-bold">Erro</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-destructive/95">{error}</p>
+              <p className="text-sm text-destructive">{error}</p>
             </CardContent>
           </Card>
         )}
 
-        {/* Renderização das Visualizações de Telas (Quando não está carregando nem deu erro) */}
         {!loading && !error && (
-          <>
-            {/* --- VISUALIZAÇÃO EM CALENDÁRIO MENSAL --- */}
-            {view === 'monthly' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-bold tracking-tight text-foreground">Visualização Mensal — Agosto 2026</h2>
-                  <p className="text-xs text-muted-foreground">* Campanhas concluídas não são listadas no calendário.</p>
+          <div className="space-y-6">
+            {/* Navegador de Datas para Visão Mensal e Semanal */}
+            {view !== 'list' && (
+              <div className="flex items-center justify-between bg-muted/20 border border-border p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="size-8" onClick={handlePrevPeriod} aria-label="Período anterior">
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" className="size-8" onClick={handleNextPeriod} aria-label="Próximo período">
+                    <ChevronRight className="size-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleToday}>Voltar ao Mês Base</Button>
                 </div>
-                
-                {/* Grade de calendário simplificada para visualização visual de MVP */}
-                <div className="grid grid-cols-7 gap-1 border border-border bg-muted/50 rounded-lg p-1">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                    <div key={day} className="text-center font-bold text-xs py-2 text-muted-foreground uppercase">{day}</div>
-                  ))}
-                  {/* Grid de dias - Simulação de Agosto de 2026 (começa no Sábado, dia 1) */}
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={`empty-${i}`} className="bg-background/20 min-h-24 p-1 rounded"></div>
-                  ))}
-                  {Array.from({ length: 31 }).map((_, idx) => {
-                    const day = idx + 1
-                    const dateStr = `2026-08-${day.toString().padStart(2, '0')}`
-                    
-                    // Encontra quais campanhas ativas rodam neste dia específico
-                    const dayCampaigns = activeCampaigns.filter(c => {
-                      return dateStr >= c.startDate && dateStr <= c.endDate
+                <h2 className="text-sm md:text-base font-bold tracking-tight text-foreground">
+                  {view === 'monthly' ? (
+                    currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()
+                  ) : (
+                    `SEMANA DE ${getStartOfWeek(currentDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' })} A ${new Date(getStartOfWeek(currentDate).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+                  )}
+                </h2>
+              </div>
+            )}
+
+            {/* --- VISUALIZAÇÃO EM CALENDÁRIO MENSAL (ALGORITMO DE FAIXAS/TRIPAS) --- */}
+            {view === 'monthly' && (
+              <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+                {/* Dias da Semana (Header) */}
+                <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-center py-2 font-bold text-xs text-muted-foreground uppercase">
+                  {weekDaysHeader.map(day => <div key={day}>{day}</div>)}
+                </div>
+
+                {/* Weeks Grid */}
+                <div className="flex flex-col">
+                  {weeks.map((week, weekIdx) => {
+                    const weekStartStr = toDateString(week[0])
+                    const weekEndStr = toDateString(week[6])
+
+                    // Filtra campanhas ativas no período desta semana específica
+                    const weekCampaigns = activeCampaigns.filter(c => {
+                      return c.startDate <= weekEndStr && c.endDate >= weekStartStr
+                    })
+
+                    // Ordena por data de início para empilhar bonitinho na esquerda primeiro
+                    weekCampaigns.sort((a, b) => a.startDate.localeCompare(b.startDate))
+
+                    // Algoritmo de agendamento de faixas horizontais (row tracks) sem colisão
+                    const slots: (Campaign | null)[][] = []
+                    const placedCampaigns: { campaign: Campaign; rowIdx: number; startIdx: number; colSpan: number }[] = []
+
+                    weekCampaigns.forEach(c => {
+                      const segStart = c.startDate < weekStartStr ? weekStartStr : c.startDate
+                      const segEnd = c.endDate > weekEndStr ? weekEndStr : c.endDate
+
+                      const startIdx = week.findIndex(d => toDateString(d) === segStart)
+                      const endIdx = week.findIndex(d => toDateString(d) === segEnd)
+                      const colSpan = endIdx - startIdx + 1
+
+                      let rowIdx = 0
+                      while (true) {
+                        if (!slots[rowIdx]) {
+                          slots[rowIdx] = Array(7).fill(null)
+                        }
+
+                        let isFree = true
+                        for (let col = startIdx; col <= endIdx; col++) {
+                          if (slots[rowIdx][col] !== null) {
+                            isFree = false
+                            break
+                          }
+                        }
+
+                        if (isFree) {
+                          for (let col = startIdx; col <= endIdx; col++) {
+                            slots[rowIdx][col] = c
+                          }
+                          break
+                        }
+                        rowIdx++
+                      }
+
+                      placedCampaigns.push({ campaign: c, rowIdx, startIdx, colSpan })
                     })
 
                     return (
-                      <div key={day} className="bg-card border border-border/60 min-h-24 p-1.5 rounded flex flex-col justify-between hover:border-border transition-all">
-                        <span className="font-semibold text-xs text-muted-foreground">{day}</span>
-                        <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-16">
-                          {dayCampaigns.map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => setSelectedCampaign(c)}
-                              className="text-[10px] leading-tight px-1 py-0.5 rounded truncate text-left font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all"
-                              title={`${c.name} (${c.channels.join(', ')})`}
+                      <div key={weekIdx} className="relative min-h-[120px] border-b border-border/60 last:border-b-0 grid grid-cols-7 pb-2">
+                        
+                        {/* Grade de fundo (números dos dias) */}
+                        {week.map((date, dateIdx) => {
+                          const isCurrentMonth = date.getMonth() === currentDate.getMonth()
+                          const isToday = toDateString(date) === toDateString(new Date())
+                          return (
+                            <div
+                              key={dateIdx}
+                              className={`absolute inset-y-0 border-r border-border/45 last:border-r-0 p-1 flex justify-end ${!isCurrentMonth ? 'bg-muted/10 text-muted-foreground/50' : ''}`}
+                              style={{ left: `${(dateIdx / 7) * 100}%`, width: `${100 / 7}%` }}
                             >
-                              {c.name}
-                            </button>
-                          ))}
+                              <span className={`text-[11px] font-bold h-5 w-5 rounded-full flex items-center justify-center ${isToday ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
+                                {date.getDate()}
+                              </span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Linha invisível de espaçamento para empilhar o conteúdo abaixo dos números */}
+                        <div className="col-span-7 h-7"></div>
+
+                        {/* Faixas/Tripas das Campanhas empilhadas por grids */}
+                        <div className="col-span-7 grid grid-cols-7 gap-y-1 relative px-0.5">
+                          {placedCampaigns.map(({ campaign, rowIdx, startIdx, colSpan }) => {
+                            const colors = getPastelColor(campaign.id)
+                            const isStartsThisWeek = campaign.startDate >= weekStartStr
+                            const isEndsThisWeek = campaign.endDate <= weekEndStr
+
+                            return (
+                              <button
+                                key={campaign.id}
+                                onClick={() => setSelectedCampaign(campaign)}
+                                className={`col-span-7 h-6 text-[10px] md:text-xs px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1.5 cursor-pointer truncate shadow-sm transition-all ${colors.bg} ${colors.text} ${colors.border} ${colors.hoverBg}`}
+                                style={{
+                                  gridColumn: `${startIdx + 1} / span ${colSpan}`,
+                                  gridRow: `${rowIdx + 1}`,
+                                  marginLeft: isStartsThisWeek ? '4px' : '0px',
+                                  marginRight: isEndsThisWeek ? '4px' : '0px',
+                                }}
+                              >
+                                <span className={`size-1.5 rounded-full shrink-0 ${colors.dot}`} />
+                                <span className="truncate">{campaign.name}</span>
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )
@@ -375,64 +553,138 @@ export default function AgendaPage({
               </div>
             )}
 
-            {/* --- VISUALIZAÇÃO EM CALENDÁRIO SEMANAL --- */}
+            {/* --- VISUALIZAÇÃO EM CALENDÁRIO SEMANAL (ALGORITMO DE FAIXAS/TRIPAS) --- */}
             {view === 'weekly' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-foreground">Visualização Semanal (02/08/2026 a 08/08/2026)</h2>
-                </div>
+              <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+                
+                {/* Cabeçalho de Dias da Semana com datas */}
+                {(() => {
+                  const startOfWeek = getStartOfWeek(currentDate)
+                  const weekDates = Array.from({ length: 7 }).map((_, i) => {
+                    const d = new Date(startOfWeek)
+                    d.setDate(startOfWeek.getDate() + i)
+                    return d
+                  })
 
-                <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-                  {[
-                    { name: 'Domingo', date: '2026-08-02' },
-                    { name: 'Segunda', date: '2026-08-03' },
-                    { name: 'Terça', date: '2026-08-04' },
-                    { name: 'Quarta', date: '2026-08-05' },
-                    { name: 'Quinta', date: '2026-08-06' },
-                    { name: 'Sexta', date: '2026-08-07' },
-                    { name: 'Sábado', date: '2026-08-08' }
-                  ].map(dayObj => {
-                    const dayCampaigns = activeCampaigns.filter(c => {
-                      return dayObj.date >= c.startDate && dayObj.date <= c.endDate
-                    })
+                  const weekStartStr = toDateString(weekDates[0])
+                  const weekEndStr = toDateString(weekDates[6])
 
-                    return (
-                      <Card key={dayObj.name} className="border-border bg-card">
-                        <CardHeader className="p-3 bg-muted/40 border-b border-border text-center">
-                          <span className="font-bold text-sm block">{dayObj.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(dayObj.date).toLocaleDateString('pt-BR')}</span>
-                        </CardHeader>
-                        <CardContent className="p-3 space-y-2 min-h-36">
-                          {dayCampaigns.length === 0 ? (
-                            <span className="text-[11px] text-muted-foreground italic text-center block mt-6">Sem campanhas</span>
+                  // Filtra campanhas que rodam nesta semana
+                  const weekCampaigns = activeCampaigns.filter(c => {
+                    return c.startDate <= weekEndStr && c.endDate >= weekStartStr
+                  })
+
+                  // Ordena para organizar as trilhas horizontais
+                  weekCampaigns.sort((a, b) => a.startDate.localeCompare(b.startDate))
+
+                  // Layout das barras contínuas da semana
+                  const slots: (Campaign | null)[][] = []
+                  const placedCampaigns: { campaign: Campaign; rowIdx: number; startIdx: number; colSpan: number }[] = []
+
+                  weekCampaigns.forEach(c => {
+                    const segStart = c.startDate < weekStartStr ? weekStartStr : c.startDate
+                    const segEnd = c.endDate > weekEndStr ? weekEndStr : c.endDate
+
+                    const startIdx = weekDates.findIndex(d => toDateString(d) === segStart)
+                    const endIdx = weekDates.findIndex(d => toDateString(d) === segEnd)
+                    const colSpan = endIdx - startIdx + 1
+
+                    let rowIdx = 0
+                    while (true) {
+                      if (!slots[rowIdx]) {
+                        slots[rowIdx] = Array(7).fill(null)
+                      }
+
+                      let isFree = true
+                      for (let col = startIdx; col <= endIdx; col++) {
+                        if (slots[rowIdx][col] !== null) {
+                          isFree = false
+                          break
+                        }
+                      }
+
+                      if (isFree) {
+                        for (let col = startIdx; col <= endIdx; col++) {
+                          slots[rowIdx][col] = c
+                        }
+                        break
+                      }
+                      rowIdx++
+                    }
+
+                    placedCampaigns.push({ campaign: c, rowIdx, startIdx, colSpan })
+                  })
+
+                  return (
+                    <div className="flex flex-col">
+                      {/* Top Header */}
+                      <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-center py-3 font-bold text-xs uppercase text-muted-foreground">
+                        {weekDaysHeader.map((dayName, idx) => {
+                          const date = weekDates[idx]
+                          const isToday = toDateString(date) === toDateString(new Date())
+                          return (
+                            <div key={dayName} className="flex flex-col items-center gap-0.5">
+                              <span>{dayName}</span>
+                              <span className={`text-[14px] font-bold h-6 w-6 rounded-full flex items-center justify-center mt-1 ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
+                                {date.getDate()}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Timeline Tracks Grid */}
+                      <div className="relative min-h-[300px] grid grid-cols-7 py-4 gap-y-2">
+                        {/* Linhas de grade vertical de fundo */}
+                        {weekDates.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className="absolute inset-y-0 border-r border-border/45 last:border-r-0"
+                            style={{ left: `${(idx / 7) * 100}%`, width: `${100 / 7}%` }}
+                          />
+                        ))}
+
+                        {/* Renderização das faixas/tripas na grade de 7 colunas */}
+                        <div className="col-span-7 grid grid-cols-7 gap-y-2.5 relative px-1">
+                          {placedCampaigns.length === 0 ? (
+                            <div className="col-span-7 text-center py-16 text-xs text-muted-foreground italic">
+                              Sem campanhas programadas nesta semana.
+                            </div>
                           ) : (
-                            dayCampaigns.map(c => (
-                              <div
-                                key={c.id}
-                                onClick={() => setSelectedCampaign(c)}
-                                className="p-2 rounded text-xs text-left bg-secondary text-secondary-foreground border border-border hover:bg-primary hover:text-primary-foreground cursor-pointer transition-all"
-                              >
-                                <span className="font-semibold block truncate">{c.name}</span>
-                                <div className="flex flex-wrap gap-0.5 mt-1">
-                                  {c.channels.slice(0, 2).map(ch => (
-                                    <span key={ch} className="text-[8px] bg-background px-1 rounded">{ch}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))
+                            placedCampaigns.map(({ campaign, rowIdx, startIdx, colSpan }) => {
+                              const colors = getPastelColor(campaign.id)
+                              const isStartsThisWeek = campaign.startDate >= weekStartStr
+                              const isEndsThisWeek = campaign.endDate <= weekEndStr
+
+                              return (
+                                <button
+                                  key={campaign.id}
+                                  onClick={() => setSelectedCampaign(campaign)}
+                                  className={`col-span-7 h-8 text-[11px] md:text-sm px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-2 cursor-pointer truncate shadow-sm transition-all ${colors.bg} ${colors.text} ${colors.border} ${colors.hoverBg}`}
+                                  style={{
+                                    gridColumn: `${startIdx + 1} / span ${colSpan}`,
+                                    gridRow: `${rowIdx + 1}`,
+                                    marginLeft: isStartsThisWeek ? '6px' : '0px',
+                                    marginRight: isEndsThisWeek ? '6px' : '0px',
+                                  }}
+                                >
+                                  <span className={`size-2 rounded-full shrink-0 ${colors.dot}`} />
+                                  <span className="truncate">{campaign.name}</span>
+                                </button>
+                              )
+                            })
                           )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
-            {/* --- VISUALIZAÇÃO EM LISTA (CRONOLÓGICA COM ABAS) --- */}
+            {/* --- VISUALIZAÇÃO EM LISTA --- */}
             {view === 'list' && (
               <div className="space-y-6">
-                {/* Abas Alternadoras da Lista */}
                 <div className="flex border-b border-border gap-6">
                   <button
                     onClick={() => setListTab('active')}
@@ -452,7 +704,6 @@ export default function AgendaPage({
                   </button>
                 </div>
 
-                {/* Empty State */}
                 {((listTab === 'active' && activeCampaigns.length === 0) ||
                   (listTab === 'completed' && completedCampaigns.length === 0)) && (
                   <div className="text-center py-16 px-4 bg-muted/10 border border-dashed border-border rounded-xl">
@@ -464,156 +715,97 @@ export default function AgendaPage({
                   </div>
                 )}
 
-                {/* Exibição dos cards de campanhas */}
-                {listTab === 'active' && activeCampaigns.length > 0 && (
+                {/* Exibição dos cards de campanhas na Lista */}
+                {((listTab === 'active' ? activeCampaigns : completedCampaigns)).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {activeCampaigns.map(c => (
-                      <Card key={c.id} className="border-border hover:shadow-md transition-all flex flex-col justify-between bg-card group">
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <Badge className={getStatusColor(c.status)} variant="outline">{c.status}</Badge>
-                            {isAdmin && (
-                              <div className="flex gap-1">
-                                {onOpenEditModal && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7 text-muted-foreground hover:text-foreground"
-                                    onClick={() => onOpenEditModal(c)}
-                                    aria-label="Editar campanha"
-                                  >
-                                    <Edit className="size-3.5" />
-                                  </Button>
-                                )}
-                                {onOpenDeleteModal && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7 text-destructive hover:text-destructive"
-                                    onClick={() => onOpenDeleteModal(c)}
-                                    aria-label="Excluir campanha"
-                                  >
-                                    <Trash2 className="size-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg font-bold mt-2 group-hover:text-primary transition-colors">{c.name}</CardTitle>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {c.channels.map(ch => (
-                              <Badge key={ch} className={getChannelColor(ch)} variant="secondary">{ch}</Badge>
-                            ))}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-3 pb-3">
-                          <div className="flex items-center text-muted-foreground text-xs gap-1.5">
-                            <Clock className="size-3.5" />
-                            <span>
-                              {new Date(c.startDate).toLocaleDateString('pt-BR')} até {new Date(c.endDate).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                          {c.budget && (
-                            <p className="text-sm font-semibold">
-                              Orçamento: <span className="text-foreground">{c.budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                            </p>
-                          )}
-                          {c.notes && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {c.notes}
-                            </p>
-                          )}
-                        </CardContent>
-                        <CardFooter className="pt-2 border-t border-border/40 flex items-center justify-between">
-                          <Button variant="ghost" size="sm" className="w-full text-xs font-semibold gap-1.5 hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => setSelectedCampaign(c)}>
-                            <MessageSquare className="size-3.5" />
-                            Ver Detalhes e Comentários ({c.comments.length})
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                    {(listTab === 'active' ? activeCampaigns : completedCampaigns).map(c => {
+                      const colors = getPastelColor(c.id)
+                      return (
+                        <Card key={c.id} className={`border-border hover:shadow-md transition-all flex flex-col justify-between bg-card group relative overflow-hidden`}>
+                          
+                          {/* Faixa lateral decorativa pastel para integrar a cor identificadora no card */}
+                          <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${colors.dot}`} />
 
-                {/* Exibição das campanhas concluídas */}
-                {listTab === 'completed' && completedCampaigns.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {completedCampaigns.map(c => (
-                      <Card key={c.id} className="border-border hover:shadow-md transition-all flex flex-col justify-between bg-card group opacity-85 hover:opacity-100">
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <Badge className={getStatusColor(c.status)} variant="outline">{c.status}</Badge>
-                            {isAdmin && (
-                              <div className="flex gap-1">
-                                {onOpenEditModal && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7 text-muted-foreground hover:text-foreground"
-                                    onClick={() => onOpenEditModal(c)}
-                                    aria-label="Editar campanha"
-                                  >
-                                    <Edit className="size-3.5" />
-                                  </Button>
-                                )}
-                                {onOpenDeleteModal && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7 text-destructive hover:text-destructive"
-                                    onClick={() => onOpenDeleteModal(c)}
-                                    aria-label="Excluir campanha"
-                                  >
-                                    <Trash2 className="size-3.5" />
-                                  </Button>
-                                )}
-                              </div>
+                          <CardHeader className="pb-3 pl-5">
+                            <div className="flex justify-between items-start gap-2">
+                              <Badge className={getStatusColor(c.status)} variant="outline">{c.status}</Badge>
+                              {isAdmin && (
+                                <div className="flex gap-1">
+                                  {onOpenEditModal && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-7 text-muted-foreground hover:text-foreground"
+                                      onClick={() => onOpenEditModal(c)}
+                                      aria-label="Editar"
+                                    >
+                                      <Edit className="size-3.5" />
+                                    </Button>
+                                  )}
+                                  {onOpenDeleteModal && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-7 text-destructive hover:text-destructive"
+                                      onClick={() => onOpenDeleteModal(c)}
+                                      aria-label="Excluir"
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <CardTitle className="text-lg font-bold mt-2 group-hover:text-primary transition-colors">{c.name}</CardTitle>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {c.channels.map(ch => (
+                                <Badge key={ch} className={colors.bg + ' ' + colors.text + ' ' + colors.border} variant="secondary">{ch}</Badge>
+                              ))}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="text-sm space-y-3 pb-3 pl-5">
+                            <div className="flex items-center text-muted-foreground text-xs gap-1.5">
+                              <Clock className="size-3.5" />
+                              <span>
+                                {new Date(c.startDate).toLocaleDateString('pt-BR')} até {new Date(c.endDate).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                            {c.budget && (
+                              <p className="text-sm font-semibold">
+                                Orçamento: <span className="text-foreground">{c.budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                              </p>
                             )}
-                          </div>
-                          <CardTitle className="text-lg font-bold mt-2 group-hover:text-primary transition-colors">{c.name}</CardTitle>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {c.channels.map(ch => (
-                              <Badge key={ch} className={getChannelColor(ch)} variant="secondary">{ch}</Badge>
-                            ))}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-3 pb-3">
-                          <div className="flex items-center text-muted-foreground text-xs gap-1.5">
-                            <Clock className="size-3.5" />
-                            <span>
-                              {new Date(c.startDate).toLocaleDateString('pt-BR')} até {new Date(c.endDate).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                          {c.budget && (
-                            <p className="text-sm font-semibold text-muted-foreground">
-                              Orçamento: <span>{c.budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                            </p>
-                          )}
-                        </CardContent>
-                        <CardFooter className="pt-2 border-t border-border/40 flex items-center justify-between">
-                          <Button variant="ghost" size="sm" className="w-full text-xs font-semibold gap-1.5 hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => setSelectedCampaign(c)}>
-                            <MessageSquare className="size-3.5" />
-                            Ver Detalhes e Comentários ({c.comments.length})
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
+                            {c.notes && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {c.notes}
+                              </p>
+                            )}
+                          </CardContent>
+                          <CardFooter className="pt-2 border-t border-border/40 flex items-center justify-between pl-5">
+                            <Button variant="ghost" size="sm" className="w-full text-xs font-semibold gap-1.5 hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => setSelectedCampaign(c)}>
+                              <MessageSquare className="size-3.5" />
+                              Ver Detalhes e Comentários ({c.comments.length})
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
       </main>
 
-      {/* 4. Footer do Layout Base */}
+      {/* Footer */}
       <footer className="border-t border-border bg-muted/10 py-6 mt-12 text-center text-xs text-muted-foreground">
         <div className="container mx-auto px-4">
           <p>© {new Date().getFullYear()} Agenda de Campanhas. Desenvolvido para alinhamento entre Marketing & Agência.</p>
         </div>
       </footer>
 
-      {/* 5. Modal de Detalhes da Campanha e Seção de Comentários */}
+      {/* Modal de Detalhes da Campanha e Seção de Comentários */}
       <Dialog open={selectedCampaign !== null} onOpenChange={open => !open && setSelectedCampaign(null)}>
         {selectedCampaign && (
           <DialogContent className="max-w-2xl bg-card border-border max-h-[85vh] overflow-y-auto">
@@ -623,7 +815,7 @@ export default function AgendaPage({
                   {selectedCampaign.status}
                 </Badge>
                 {selectedCampaign.channels.map(ch => (
-                  <Badge key={ch} className={getChannelColor(ch)} variant="secondary">
+                  <Badge key={ch} className="bg-muted text-muted-foreground" variant="secondary">
                     {ch}
                   </Badge>
                 ))}
@@ -636,7 +828,6 @@ export default function AgendaPage({
             </DialogHeader>
 
             <div className="space-y-6 my-4 border-t border-b border-border/40 py-4">
-              {/* Orçamento e Descrição */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {selectedCampaign.budget && (
                   <div>
@@ -690,7 +881,7 @@ export default function AgendaPage({
                 </div>
               </div>
 
-              {/* Formulário para Novo Comentário */}
+              {/* Formulário para Comentário */}
               <form onSubmit={handleCommentSubmit} className="space-y-3 bg-muted/20 p-4 rounded-lg border border-border/40">
                 <h5 className="text-xs font-bold text-foreground">Deixar um comentário</h5>
                 
@@ -721,7 +912,7 @@ export default function AgendaPage({
                     value={commentText}
                     onChange={e => setCommentText(e.target.value)}
                     rows={3}
-                    className="w-full text-xs p-2 rounded-md bg-card border border-border outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/50"
+                    className="w-full text-xs p-2 rounded-md bg-card border border-border outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   />
                   <div className="text-[10px] text-muted-foreground text-right">
                     {commentText.length}/500 caracteres
