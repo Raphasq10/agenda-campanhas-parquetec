@@ -1,0 +1,3 @@
+# Bloquear o rastreamento de todo o site para qualquer robô de buscas (Google, Bing, Yahoo, etc.)
+User-agent: *
+Disallow: /
