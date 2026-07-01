@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Lock, User, ArrowLeft } from 'lucide-react'
+import { Lock, Mail, ArrowLeft } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 // Schema de validação Zod para garantir que os dados de login sigam as regras básicas de segurança
 const loginSchema = z.object({
-  username: z.string()
-    .min(3, { message: 'O login deve ter pelo menos 3 caracteres.' })
-    .max(50, { message: 'O login deve ter no máximo 50 caracteres.' })
+  email: z.string()
+    .email({ message: 'Por favor, insira um e-mail válido.' })
+    .max(100, { message: 'O e-mail deve ter no máximo 100 caracteres.' })
     .trim(),
   password: z.string()
     .min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
@@ -37,25 +38,36 @@ export default function LoginPage({ onLoginSuccess, onBackToAgenda }: LoginProps
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: '',
+      email: '',
       password: ''
     }
   })
 
-  // Simulação do envio de login para validação (lógica de autenticação com banco virá depois)
-  const onSubmit = (data: LoginFormValues) => {
+  // Envio de dados de autenticação para o Supabase Auth
+  const onSubmit = async (data: LoginFormValues) => {
     setLoading(true)
     setErrorMsg(null)
 
-    setTimeout(() => {
-      // Simulação rápida para propósitos visuais: aceita qualquer usuário admin com senha '123456'
-      if (data.username === 'admin' && data.password === '123456') {
-        onLoginSuccess()
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password
+      })
+
+      if (error) {
+        if (error.message === 'Invalid login credentials') {
+          setErrorMsg('E-mail ou senha inválidos.')
+        } else {
+          setErrorMsg(error.message)
+        }
       } else {
-        setErrorMsg('Usuário ou senha inválidos. Tente usar "admin" e "123456".')
-        setLoading(false)
+        onLoginSuccess()
       }
-    }, 1000)
+    } catch (err) {
+      setErrorMsg('Erro de conexão ao tentar fazer login.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -93,22 +105,22 @@ export default function LoginPage({ onLoginSuccess, onBackToAgenda }: LoginProps
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-semibold flex items-center gap-1.5">
-                <User className="size-3.5 text-muted-foreground" />
-                Login
+              <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-1.5">
+                <Mail className="size-3.5 text-muted-foreground" />
+                E-mail
               </Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Ex: admin"
-                maxLength={50} // Limite rígido contra overflows e ataques
+                id="email"
+                type="email"
+                placeholder="Ex: seu-email@empresa.com"
+                maxLength={100} // Limite de 100 caracteres
                 className="w-full focus-visible:ring-primary/50 focus-visible:border-primary"
-                {...register('username')}
-                aria-invalid={errors.username ? 'true' : 'false'}
+                {...register('email')}
+                aria-invalid={errors.email ? 'true' : 'false'}
               />
-              {errors.username && (
+              {errors.email && (
                 <p className="text-xs text-destructive font-medium mt-1">
-                  {errors.username.message}
+                  {errors.email.message}
                 </p>
               )}
             </div>

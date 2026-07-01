@@ -1,176 +1,194 @@
 import React from 'react'
 import AgendaPage from './pages/agenda'
-import type { Campaign } from './pages/agenda'
 import LoginPage from './pages/login'
 import AdminPanelPage from './pages/admin-panel'
+import type { Campaign } from './pages/agenda'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
-// Banco de dados fictício em memória para popular o MVP com campanhas ricas e reais de marketing
-const INITIAL_CAMPAIGNS: Campaign[] = [
-  {
-    id: '1',
-    name: 'Promoção Dia dos Pais 2026',
-    channels: ['Meta', 'Google', 'WhatsApp'],
-    startDate: '2026-08-01',
-    endDate: '2026-08-15',
-    status: 'A começar',
-    budget: 8500.0,
-    notes: 'Foco em conversão de público masculino de 25 a 50 anos. Criativos em vídeo de 15 segundos para Reels e Stories.',
-    comments: [
-      {
-        id: 'c1',
-        author: 'Mariana Silva',
-        role: 'Marketing',
-        text: 'Layouts base de criativos aprovados pela diretoria. Agência pode iniciar a produção dos vídeos.',
-        createdAt: '2026-07-01T10:00:00.000Z'
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Campanha de Tráfego: Lançamento Primavera',
-    channels: ['Meta', 'LinkedIn', 'YouTube'],
-    startDate: '2026-09-01',
-    endDate: '2026-09-30',
-    status: 'A começar',
-    budget: 15000.0,
-    notes: 'Campanha institucional para atração de leads B2B (LinkedIn) e vendas B2C (Meta/YouTube).',
-    comments: []
-  },
-  {
-    id: '3',
-    name: 'Promoção de Inverno Ativa',
-    channels: ['Meta', 'Google', 'YouTube'],
-    startDate: '2026-06-15',
-    endDate: '2026-07-15',
-    status: 'Em andamento',
-    budget: 12000.0,
-    notes: 'Ação focada em retargeting de carrinho abandonado com cupom de 15% OFF.',
-    comments: [
-      {
-        id: 'c2',
-        author: 'Roberto Costa',
-        role: 'Agência',
-        text: 'Subimos o orçamento diário no Google Ads em 20% conforme o planejado. A taxa de conversão subiu 5%.',
-        createdAt: '2026-06-28T14:30:00.000Z'
-      },
-      {
-        id: 'c3',
-        author: 'Mariana Silva',
-        role: 'Marketing',
-        text: 'Excelente resultado! O custo por lead caiu bastante. Vamos monitorar até o final da semana.',
-        createdAt: '2026-06-29T09:15:00.000Z'
-      }
-    ]
-  },
-  {
-    id: '4',
-    name: 'Liquidação de Outono Concluída',
-    channels: ['Meta', 'Google'],
-    startDate: '2026-05-01',
-    endDate: '2026-05-31',
-    status: 'Concluída',
-    budget: 5000.0,
-    notes: 'Queima de estoque de final de estação.',
-    comments: [
-      {
-        id: 'c4',
-        author: 'Roberto Costa',
-        role: 'Agência',
-        text: 'Campanhas pausadas no painel. O relatório final consolidado de conversões foi enviado por e-mail.',
-        createdAt: '2026-06-01T18:00:00.000Z'
-      }
-    ]
-  }
-]
+// 1. Mapeadores para traduzir a estrutura do PostgreSQL (snake_case) para o React (camelCase)
+const mapCampaignFromDB = (dbCamp: any): Campaign => ({
+  id: dbCamp.id,
+  name: dbCamp.name,
+  channels: dbCamp.channels,
+  startDate: dbCamp.start_date,
+  endDate: dbCamp.end_date,
+  status: dbCamp.status,
+  budget: dbCamp.budget ? Number(dbCamp.budget) : undefined,
+  notes: dbCamp.notes || '',
+  // Mapeia e ordena os comentários de forma cronológica
+  comments: (dbCamp.comments || []).map((c: any) => ({
+    id: c.id,
+    author: c.author,
+    role: c.role,
+    text: c.text,
+    createdAt: c.created_at
+  })).sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt))
+})
+
+const mapCampaignToDB = (camp: Omit<Campaign, 'id' | 'comments'>) => ({
+  name: camp.name,
+  channels: camp.channels,
+  start_date: camp.startDate,
+  end_date: camp.endDate,
+  status: camp.status,
+  budget: camp.budget || null,
+  notes: camp.notes || ''
+})
 
 export default function App() {
-  // Estado que gerencia qual página está visível ('agenda' | 'login' | 'admin')
   const [currentPage, setCurrentPage] = React.useState<'agenda' | 'login' | 'admin'>('agenda')
-  // Estado das campanhas em memória para o CRUD do MVP funcionar
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>(INITIAL_CAMPAIGNS)
-  // Estados para simular loading de rede e exibição de Skeletons
+  const [campaigns, setCampaigns] = React.useState<Campaign[]>([])
+  const [session, setSession] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(true)
+  const [dbError, setDbError] = React.useState<string | null>(null)
 
-  // Simula um carregamento de rede de 800ms ao carregar o app para vermos os Skeletons em ação
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
+  // 2. Função para buscar campanhas e comentários agregados do Supabase
+  const fetchCampaigns = async (showLoadingIndicator = false) => {
+    if (showLoadingIndicator) setLoading(true)
+    setDbError(null)
+    try {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*, comments(*)')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const mapped = (data || []).map(mapCampaignFromDB)
+      setCampaigns(mapped)
+    } catch (err: any) {
+      setDbError('Não foi possível carregar as campanhas. Verifique suas conexões e chaves no .env.local.')
+      console.error('Erro Supabase:', err.message)
+    } finally {
       setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
+    }
+  }
+
+  // 3. Monitoramento de Sessão de Usuário e Inicialização
+  React.useEffect(() => {
+    // Busca a sessão ativa imediatamente no carregamento
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session) {
+        setCurrentPage('admin')
+      }
+    })
+
+    // Escuta mudanças de estado de autenticação (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session) {
+        setCurrentPage('admin')
+      } else {
+        setCurrentPage('agenda')
+      }
+    })
+
+    fetchCampaigns(true)
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  // 1. Ação de Adicionar Comentário
-  const handleAddComment = (campaignId: string, author: string, text: string) => {
-    const newComment = {
-      id: Date.now().toString(),
-      author,
-      role: currentPage === 'admin' ? ('Marketing' as const) : ('Agência' as const),
-      text,
-      createdAt: new Date().toISOString()
+  // 4. CRUD: Adicionar Comentário
+  const handleAddComment = async (campaignId: string, author: string, text: string) => {
+    // Determina o cargo do autor na hora de salvar
+    const role = session ? 'Marketing' : 'Agência'
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .insert({
+          campaign_id: campaignId,
+          author,
+          role,
+          text
+        })
+
+      if (error) throw error
+
+      toast.success('Comentário publicado com sucesso!')
+      fetchCampaigns(false) // Recarrega silenciosamente em background
+    } catch (err: any) {
+      toast.error('Erro ao salvar comentário no banco de dados.')
+      console.error(err)
     }
-
-    setCampaigns(prev => prev.map(campaign => {
-      if (campaign.id === campaignId) {
-        return {
-          ...campaign,
-          comments: [...campaign.comments, newComment]
-        }
-      }
-      return campaign
-    }))
-
-    toast.success('Comentário publicado com sucesso!')
   }
 
-  // 2. Ação de Adicionar Nova Campanha (Admin)
-  const handleAddCampaign = (newCampData: Omit<Campaign, 'id' | 'comments'>) => {
-    const newCampaign: Campaign = {
-      ...newCampData,
-      id: Date.now().toString(),
-      comments: []
+  // 5. CRUD: Adicionar Nova Campanha (Admin)
+  const handleAddCampaign = async (newCampData: Omit<Campaign, 'id' | 'comments'>) => {
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .insert(mapCampaignToDB(newCampData))
+
+      if (error) throw error
+
+      toast.success(`Campanha "${newCampData.name}" criada com sucesso!`)
+      fetchCampaigns(false)
+    } catch (err: any) {
+      toast.error('Erro ao cadastrar campanha no banco.')
+      console.error(err)
     }
-
-    setCampaigns(prev => [newCampaign, ...prev])
-    toast.success(`Campanha "${newCampaign.name}" criada com sucesso!`)
   }
 
-  // 3. Ação de Editar Campanha (Admin)
-  const handleEditCampaign = (id: string, updatedFields: Partial<Campaign>) => {
-    setCampaigns(prev => prev.map(campaign => {
-      if (campaign.id === id) {
-        return {
-          ...campaign,
-          ...updatedFields
-        }
-      }
-      return campaign
-    }))
+  // 6. CRUD: Editar Campanha (Admin)
+  const handleEditCampaign = async (id: string, updatedFields: Partial<Campaign>) => {
+    try {
+      const dbFields: any = {}
+      if (updatedFields.name !== undefined) dbFields.name = updatedFields.name
+      if (updatedFields.channels !== undefined) dbFields.channels = updatedFields.channels
+      if (updatedFields.startDate !== undefined) dbFields.start_date = updatedFields.startDate
+      if (updatedFields.endDate !== undefined) dbFields.end_date = updatedFields.endDate
+      if (updatedFields.status !== undefined) dbFields.status = updatedFields.status
+      if (updatedFields.budget !== undefined) dbFields.budget = updatedFields.budget
+      if (updatedFields.notes !== undefined) dbFields.notes = updatedFields.notes
 
-    toast.success('Campanha atualizada com sucesso!')
+      const { error } = await supabase
+        .from('campaigns')
+        .update(dbFields)
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast.success('Campanha atualizada com sucesso!')
+      fetchCampaigns(false)
+    } catch (err: any) {
+      toast.error('Erro ao atualizar campanha no banco.')
+      console.error(err)
+    }
   }
 
-  // 4. Ação de Excluir Campanha (Admin)
-  const handleDeleteCampaign = (id: string) => {
-    setCampaigns(prev => prev.filter(c => c.id !== id))
-    toast.success('Campanha removida da agenda.')
+  // 7. CRUD: Excluir Campanha (Admin)
+  const handleDeleteCampaign = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast.success('Campanha removida com sucesso.')
+      fetchCampaigns(false)
+    } catch (err: any) {
+      toast.error('Erro ao excluir campanha no banco.')
+      console.error(err)
+    }
   }
 
-  // Lógica de Login e Logout
-  const handleLoginSuccess = () => {
-    setCurrentPage('admin')
-    toast.success('Autenticado com sucesso! Bem-vinda, Mariana.')
-  }
-
-  const handleLogout = () => {
-    setCurrentPage('agenda')
-    toast.success('Sessão encerrada.')
+  // 8. Logout Administrativo
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      toast.success('Sessão encerrada com sucesso.')
+    } catch (err: any) {
+      toast.error('Erro ao fazer logout.')
+    }
   }
 
   return (
     <React.Fragment>
-      {/* 1. Roteador por Estado */}
       {currentPage === 'agenda' && (
         <AgendaPage
           campaigns={campaigns}
@@ -178,12 +196,13 @@ export default function App() {
           onNavigateToLogin={() => setCurrentPage('login')}
           onAddComment={handleAddComment}
           loading={loading}
+          error={dbError}
         />
       )}
 
       {currentPage === 'login' && (
         <LoginPage
-          onLoginSuccess={handleLoginSuccess}
+          onLoginSuccess={() => setCurrentPage('admin')}
           onBackToAgenda={() => setCurrentPage('agenda')}
         />
       )}
@@ -199,7 +218,6 @@ export default function App() {
         />
       )}
 
-      {/* Gerenciador de balões de aviso sonner */}
       <Toaster position="bottom-right" richColors />
     </React.Fragment>
   )
