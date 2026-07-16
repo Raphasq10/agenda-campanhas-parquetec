@@ -10,3 +10,8 @@ Senha database supa: gxhVBCCkMMuScYbc
 
 login app:comunicacaoptibr@gmail.com
 Senha:cm789R$
+
+
+Login para ver a pagina:
+login: agencia
+senha: itaipuparquetec789R$

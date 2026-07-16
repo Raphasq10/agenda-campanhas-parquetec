@@ -144,6 +144,12 @@ const getStartOfWeek = (d: Date): Date => {
   return new Date(date.setDate(diff))
 }
 
+const formatLocalDate = (dateStr: string): string => {
+  if (!dateStr) return ''
+  const normalized = dateStr.replace(/-/g, '/')
+  return new Date(normalized).toLocaleDateString('pt-BR')
+}
+
 export default function AgendaPage({
   campaigns,
   isAdmin,
@@ -763,7 +769,7 @@ export default function AgendaPage({
                             <div className="flex items-center text-muted-foreground text-xs gap-1.5">
                               <Clock className="size-3.5" />
                               <span>
-                                {new Date(c.startDate).toLocaleDateString('pt-BR')} até {new Date(c.endDate).toLocaleDateString('pt-BR')}
+                               {formatLocalDate(c.startDate)} até {formatLocalDate(c.endDate)}
                               </span>
                             </div>
                             {c.budget && (
@@ -819,7 +825,7 @@ export default function AgendaPage({
               <DialogTitle className="text-2xl font-bold mt-2 text-foreground">{selectedCampaign.name}</DialogTitle>
               <DialogDescription className="flex items-center gap-1.5 mt-1">
                 <Clock className="size-3.5" />
-                Vigência: {new Date(selectedCampaign.startDate).toLocaleDateString('pt-BR')} a {new Date(selectedCampaign.endDate).toLocaleDateString('pt-BR')}
+                Vigência: {formatLocalDate(selectedCampaign.startDate)} a {formatLocalDate(selectedCampaign.endDate)}
               </DialogDescription>
             </DialogHeader>
 
